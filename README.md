@@ -17,3 +17,7 @@
 
 - `index.html` — グラフページ本体（依存ライブラリなしの静的HTML + SVG）
 - `data.csv` — 年度・普通国債残高（兆円）・対GDP比（%）
+
+## 作成について
+
+このページは [Claude Code](https://claude.com/claude-code) で作成しました。財務省の公表資料からのデータ抽出、グラフの実装、GitHub Pagesへの公開までを Claude Code が行っています。
