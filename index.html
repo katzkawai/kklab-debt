@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日本の国債残高の推移（1965–2026年度）</title>
+<meta name="description" content="財務省データに基づく日本の普通国債残高と対GDP比の時系列グラフ（昭和40年度〜令和8年度見込み）">
+<style>
+  :root {
+    color-scheme: light;
+    --page:           #f9f9f7;
+    --surface-1:      #fcfcfb;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --grid:           #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-1:       #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --page:           #0d0d0d;
+      --surface-1:      #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --grid:           #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --series-1:       #3987e5;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    line-height: 1.6;
+    padding: 32px 16px 48px;
+  }
+  main { max-width: 960px; margin: 0 auto; }
+  header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: .01em; }
+  header p.sub { color: var(--text-secondary); font-size: .9rem; margin-top: 4px; }
+
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin: 24px 0 16px;
+  }
+  .tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .tile .label { font-size: .78rem; color: var(--text-secondary); }
+  .tile .value { font-size: 1.7rem; font-weight: 600; margin-top: 2px; }
+  .tile .value small { font-size: .95rem; font-weight: 500; color: var(--text-secondary); margin-left: 2px; }
+  .tile .note { font-size: .72rem; color: var(--text-muted); margin-top: 2px; }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 18px 12px;
+    margin-top: 16px;
+  }
+  .card h2 { font-size: 1.02rem; font-weight: 600; }
+  .card p.desc { font-size: .8rem; color: var(--text-secondary); margin: 2px 0 10px; }
+  .chart-wrap { position: relative; }
+  .chart-wrap svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
+  .chart-wrap svg:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; border-radius: 6px; }
+  .axis-text { font-size: 11px; fill: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .anno-text { font-size: 11px; fill: var(--text-muted); }
+  .end-label { font-size: 12px; font-weight: 600; fill: var(--text-primary); }
+  .end-label-sub { font-size: 10.5px; fill: var(--text-secondary); }
+
+  .tooltip {
+    position: absolute; pointer-events: none; display: none;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.13);
+    padding: 8px 12px; font-size: .78rem; white-space: nowrap; z-index: 5;
+  }
+  .tooltip .tt-title { color: var(--text-secondary); font-size: .72rem; margin-bottom: 2px; }
+  .tooltip .tt-row { display: flex; align-items: center; gap: 7px; }
+  .tooltip .tt-key { display: inline-block; width: 14px; height: 0; border-top: 2.5px solid var(--series-1); border-radius: 2px; }
+  .tooltip .tt-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tooltip .tt-name { color: var(--text-secondary); }
+
+  .chart-note { font-size: .74rem; color: var(--text-muted); margin: 8px 2px 4px; }
+
+  details { margin-top: 20px; }
+  details summary {
+    cursor: pointer; font-size: .88rem; font-weight: 600; color: var(--text-secondary);
+    padding: 8px 4px; user-select: none;
+  }
+  .table-scroll { overflow-x: auto; margin-top: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: .8rem; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; }
+  th, td { padding: 5px 12px; text-align: right; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--text-secondary); font-weight: 600; background: var(--page); position: sticky; top: 0; }
+  tr:last-child td { border-bottom: none; }
+  td.est { color: var(--text-secondary); }
+
+  footer { margin-top: 28px; font-size: .76rem; color: var(--text-muted); }
+  footer a { color: var(--text-secondary); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>日本の国債残高の推移</h1>
+    <p class="sub">普通国債残高（各年度末）・昭和40年度（1965）〜令和8年度（2026、見込み）｜出典：財務省</p>
+  </header>
+
+  <div class="kpi-row">
+    <div class="tile">
+      <div class="label">普通国債残高（2024年度末・実績）</div>
+      <div class="value">1,079.7<small>兆円</small></div>
+      <div class="note">令和6年度末</div>
+    </div>
+    <div class="tile">
+      <div class="label">対GDP比（2024年度末・実績）</div>
+      <div class="value">168.1<small>%</small></div>
+      <div class="note">名目GDP比</div>
+    </div>
+    <div class="tile">
+      <div class="label">2026年度末（見込み）</div>
+      <div class="value">1,145.4<small>兆円</small></div>
+      <div class="note">令和8年度当初予算ベース</div>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2>普通国債残高（兆円）</h2>
+    <p class="desc">各年度末時点の額面総額。点線は見込み値。</p>
+    <div class="chart-wrap" id="chart-balance"></div>
+    <p class="chart-note">2024年度までは実績、2025年度は補正後見込み、2026年度は当初予算ベースの見込み。</p>
+  </section>
+
+  <section class="card">
+    <h2>普通国債残高の対GDP比（%）</h2>
+    <p class="desc">名目GDPに対する比率。点線は見込み値。</p>
+    <div class="chart-wrap" id="chart-gdp"></div>
+    <p class="chart-note">GDPは名目値。2025・2026年度は政府経済見通し（令和8年1月23日）による。</p>
+  </section>
+
+  <details>
+    <summary>データ表を見る（全年度）</summary>
+    <div class="table-scroll">
+      <table id="data-table">
+        <thead>
+          <tr><th>年度</th><th>和暦</th><th>残高（兆円）</th><th>対GDP比（%）</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </details>
+
+  <footer>
+    <p>出典：財務省「<a href="https://www.mof.go.jp/jgbs/reference/appendix/hakkou02.pdf">国債発行額の推移（実績ベース）</a>」（<a href="https://www.mof.go.jp/jgbs/reference/appendix/index.htm">国債等関係諸資料</a>）。残高は各年度末時点の普通国債残高（億円単位の原数値を兆円に換算、小数第1位まで）。最終更新：2026年8月9日</p>
+  </footer>
+</main>
+
+<script>
+"use strict";
+// [年度, 普通国債残高(兆円), 対GDP比(%)] — 財務省「国債発行額の推移（実績ベース）」より
+// 2024年度までは実績、2025年度は補正後見込み、2026年度は当初予算ベースの見込み
+const DATA = [
+  [1965, 0.2, 0.6], [1966, 0.9, 2.2], [1967, 1.6, 3.4], [1968, 2.1, 3.7],
+  [1969, 2.5, 3.8], [1970, 2.8, 3.7], [1971, 4.0, 4.8], [1972, 5.8, 6.0],
+  [1973, 7.6, 6.5], [1974, 9.7, 7.0], [1975, 15.0, 9.8], [1976, 22.1, 12.9],
+  [1977, 31.9, 16.8], [1978, 42.6, 20.4], [1979, 56.3, 25.0], [1980, 70.5, 28.4],
+  [1981, 82.3, 31.1], [1982, 96.5, 34.9], [1983, 109.7, 38.0], [1984, 121.7, 39.5],
+  [1985, 134.4, 40.7], [1986, 145.1, 42.4], [1987, 151.8, 41.9], [1988, 156.8, 40.4],
+  [1989, 160.9, 38.7], [1990, 166.3, 36.8], [1991, 171.6, 36.2], [1992, 178.4, 36.9],
+  [1993, 192.5, 39.9], [1994, 206.6, 39.6], [1995, 225.2, 42.1], [1996, 244.7, 44.5],
+  [1997, 258.0, 46.7], [1998, 295.2, 54.6], [1999, 331.7, 61.8], [2000, 367.6, 67.3],
+  [2001, 392.4, 73.3], [2002, 421.1, 79.4], [2003, 457.0, 85.8], [2004, 499.0, 93.3],
+  [2005, 526.9, 97.8], [2006, 531.7, 98.0], [2007, 541.5, 99.6], [2008, 545.9, 104.5],
+  [2009, 594.0, 118.6], [2010, 636.3, 125.0], [2011, 669.9, 132.9], [2012, 705.0, 139.7],
+  [2013, 743.9, 143.3], [2014, 774.1, 145.0], [2015, 805.4, 145.9], [2016, 830.6, 149.3],
+  [2017, 853.2, 150.3], [2018, 874.0, 153.4], [2019, 886.7, 155.4], [2020, 946.6, 170.8],
+  [2021, 991.4, 172.0], [2022, 1027.1, 173.6], [2023, 1053.7, 170.1], [2024, 1079.7, 168.1],
+  [2025, 1136.8, 169.7], [2026, 1145.4, 165.5]
+];
+const ACTUAL_LAST = 2024; // これ以降は見込み
+
+function wareki(y) {
+  if (y <= 1988) return "昭和" + (y - 1925);
+  if (y === 1989) return "平成元";
+  if (y <= 2018) return "平成" + (y - 1988);
+  if (y === 2019) return "令和元";
+  return "令和" + (y - 2018);
+}
+const fmt1 = v => v.toLocaleString("ja-JP", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+const ANNOTATIONS = [
+  { year: 1990, label: "バブル崩壊" },
+  { year: 2008, label: "リーマン・ショック" },
+  { year: 2020, label: "新型コロナ" }
+];
+
+function buildChart(containerId, opts) {
+  const W = 920, H = 430;
+  const M = { top: 26, right: 30, bottom: 34, left: 58 };
+  const pw = W - M.left - M.right, ph = H - M.top - M.bottom;
+  const years = DATA.map(d => d[0]);
+  const vals = DATA.map(d => d[opts.col]);
+  const x = y => M.left + (y - years[0]) / (years[years.length - 1] - years[0]) * pw;
+  const yv = v => M.top + ph - v / opts.yMax * ph;
+  const actualIdx = years.indexOf(ACTUAL_LAST);
+
+  const pts = DATA.map(d => [x(d[0]), yv(d[opts.col])]);
+  const lineTo = (arr) => arr.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+  const solidPath = lineTo(pts.slice(0, actualIdx + 1));
+  const dashPath = lineTo(pts.slice(actualIdx));
+  const areaPath = solidPath +
+    " L" + pts[actualIdx][0].toFixed(1) + " " + (M.top + ph) +
+    " L" + pts[0][0].toFixed(1) + " " + (M.top + ph) + " Z";
+
+  let g = "";
+  // グリッド線とY軸目盛
+  for (let v = 0; v <= opts.yMax; v += opts.yStep) {
+    const yy = yv(v);
+    g += `<line x1="${M.left}" y1="${yy}" x2="${M.left + pw}" y2="${yy}" stroke="${v === 0 ? "var(--baseline)" : "var(--grid)"}" stroke-width="1"/>`;
+    g += `<text class="axis-text" x="${M.left - 8}" y="${yy + 4}" text-anchor="end">${v.toLocaleString("ja-JP")}</text>`;
+  }
+  // X軸目盛（10年刻み＋最終年）
+  for (let y = 1965; y <= 2025; y += 10) {
+    g += `<text class="axis-text" x="${x(y)}" y="${M.top + ph + 20}" text-anchor="middle">${y}</text>`;
+    g += `<line x1="${x(y)}" y1="${M.top + ph}" x2="${x(y)}" y2="${M.top + ph + 5}" stroke="var(--baseline)" stroke-width="1"/>`;
+  }
+  // Y軸単位
+  g += `<text class="axis-text" x="${M.left - 8}" y="${M.top - 12}" text-anchor="end">${opts.unit}</text>`;
+  // 注釈（出来事）
+  if (opts.annotate) {
+    for (const a of ANNOTATIONS) {
+      const ax = x(a.year);
+      const ay = yv(DATA.find(d => d[0] === a.year)[opts.col]);
+      g += `<line x1="${ax}" y1="${M.top + 4}" x2="${ax}" y2="${ay - 8}" stroke="var(--grid)" stroke-width="1"/>`;
+      const anchor = a.year >= 2015 ? "end" : "middle";
+      g += `<text class="anno-text" x="${ax + (anchor === "end" ? -4 : 0)}" y="${M.top + 14}" text-anchor="${anchor}">${a.label}</text>`;
+    }
+  }
+  // 面（実績部分のみ、10%ウォッシュ）
+  if (opts.area) g += `<path d="${areaPath}" fill="var(--series-1)" opacity="0.1"/>`;
+  // 実績ライン（実線）＋見込みライン（点線）
+  g += `<path d="${solidPath}" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  g += `<path d="${dashPath}" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // 終端マーカー（サーフェスリング付き）
+  const last = pts[pts.length - 1];
+  g += `<circle cx="${last[0]}" cy="${last[1]}" r="6" fill="var(--surface-1)"/>`;
+  g += `<circle cx="${last[0]}" cy="${last[1]}" r="4" fill="var(--series-1)"/>`;
+  // 終端の直接ラベル（ラインと重ならない側に置く）
+  const lastVal = vals[vals.length - 1];
+  const labelY = opts.endBelow ? last[1] + 24 : last[1] - 14;
+  g += `<text class="end-label" x="${last[0] - 10}" y="${labelY}" text-anchor="end">${fmt1(lastVal)}${opts.unitShort}</text>`;
+  // クロスヘア（ホバー時のみ表示）
+  g += `<line class="crosshair" x1="0" y1="${M.top}" x2="0" y2="${M.top + ph}" stroke="var(--baseline)" stroke-width="1" style="display:none"/>`;
+  g += `<circle class="hover-dot-ring" r="6" fill="var(--surface-1)" style="display:none"/>`;
+  g += `<circle class="hover-dot" r="4" fill="var(--series-1)" style="display:none"/>`;
+
+  const wrap = document.getElementById(containerId);
+  wrap.innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" role="img" tabindex="0" aria-label="${opts.aria}">${g}</svg>` +
+    `<div class="tooltip"></div>`;
+
+  // ホバーレイヤー：最寄りの年度にスナップ
+  const svg = wrap.querySelector("svg");
+  const tooltip = wrap.querySelector(".tooltip");
+  const crosshair = wrap.querySelector(".crosshair");
+  const hoverDot = wrap.querySelector(".hover-dot");
+  const hoverRing = wrap.querySelector(".hover-dot-ring");
+  let activeIdx = -1;
+
+  function show(idx) {
+    activeIdx = idx;
+    const d = DATA[idx];
+    const px = pts[idx][0], py = pts[idx][1];
+    crosshair.setAttribute("x1", px); crosshair.setAttribute("x2", px);
+    crosshair.style.display = "";
+    hoverRing.setAttribute("cx", px); hoverRing.setAttribute("cy", py); hoverRing.style.display = "";
+    hoverDot.setAttribute("cx", px); hoverDot.setAttribute("cy", py); hoverDot.style.display = "";
+
+    tooltip.replaceChildren();
+    const title = document.createElement("div");
+    title.className = "tt-title";
+    title.textContent = `${d[0]}年度（${wareki(d[0])}）` + (d[0] > ACTUAL_LAST ? "・見込み" : "");
+    const row1 = document.createElement("div");
+    row1.className = "tt-row";
+    const key = document.createElement("span"); key.className = "tt-key";
+    const val = document.createElement("span"); val.className = "tt-val";
+    val.textContent = opts.col === 1 ? `${fmt1(d[1])}兆円` : `${fmt1(d[2])}%`;
+    const name = document.createElement("span"); name.className = "tt-name";
+    name.textContent = opts.col === 1 ? "残高" : "対GDP比";
+    row1.append(key, val, name);
+    const row2 = document.createElement("div");
+    row2.className = "tt-row";
+    const val2 = document.createElement("span"); val2.className = "tt-name";
+    val2.textContent = opts.col === 1 ? `対GDP比 ${fmt1(d[2])}%` : `残高 ${fmt1(d[1])}兆円`;
+    row2.append(val2);
+    tooltip.append(title, row1, row2);
+    tooltip.style.display = "block";
+
+    const rect = wrap.getBoundingClientRect();
+    const sx = rect.width / W;
+    let tx = px * sx + 14;
+    const ttw = tooltip.offsetWidth;
+    if (tx + ttw > rect.width - 4) tx = px * sx - ttw - 14;
+    tooltip.style.left = tx + "px";
+    tooltip.style.top = Math.max(4, py * sx - 30) + "px";
+  }
+  function hide() {
+    activeIdx = -1;
+    tooltip.style.display = "none";
+    crosshair.style.display = "none";
+    hoverDot.style.display = "none";
+    hoverRing.style.display = "none";
+  }
+  svg.addEventListener("pointermove", ev => {
+    const rect = svg.getBoundingClientRect();
+    const mx = (ev.clientX - rect.left) / rect.width * W;
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < pts.length; i++) {
+      const dd = Math.abs(pts[i][0] - mx);
+      if (dd < bd) { bd = dd; best = i; }
+    }
+    show(best);
+  });
+  svg.addEventListener("pointerleave", hide);
+  svg.addEventListener("keydown", ev => {
+    if (ev.key === "ArrowRight") { show(Math.min(DATA.length - 1, activeIdx < 0 ? DATA.length - 1 : activeIdx + 1)); ev.preventDefault(); }
+    else if (ev.key === "ArrowLeft") { show(Math.max(0, activeIdx < 0 ? DATA.length - 1 : activeIdx - 1)); ev.preventDefault(); }
+    else if (ev.key === "Escape") hide();
+  });
+  svg.addEventListener("blur", hide);
+}
+
+buildChart("chart-balance", {
+  col: 1, yMax: 1200, yStep: 200, unit: "兆円", unitShort: "兆円",
+  area: true, annotate: true, endBelow: false,
+  aria: "普通国債残高の推移。1965年度の0.2兆円から2026年度見込みの1,145.4兆円まで増加。"
+});
+buildChart("chart-gdp", {
+  col: 2, yMax: 180, yStep: 30, unit: "%", unitShort: "%",
+  area: false, annotate: false, endBelow: true,
+  aria: "普通国債残高の対GDP比の推移。1965年度の0.6%から2026年度見込みの165.5%まで上昇。"
+});
+
+// データ表
+const tbody = document.querySelector("#data-table tbody");
+for (const d of DATA) {
+  const tr = document.createElement("tr");
+  const isEst = d[0] > ACTUAL_LAST;
+  const cells = [
+    d[0] + "年度" + (isEst ? "（見込み）" : ""),
+    wareki(d[0]) + "年度",
+    fmt1(d[1]),
+    fmt1(d[2])
+  ];
+  cells.forEach((c, i) => {
+    const td = document.createElement("td");
+    td.textContent = c;
+    if (isEst) td.className = "est";
+    tr.appendChild(td);
+  });
+  tbody.appendChild(tr);
+}
+</script>
+</body>
+</html>
